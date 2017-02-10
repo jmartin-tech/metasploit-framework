@@ -169,12 +169,7 @@ module Msf::DBManager::Import::Nexpose::Simple
   def process_nexpose_data_sxml_refs(vuln)
     refs = []
     vid = vuln.attributes['id'].to_s.downcase
-    vry = vuln.attributes['resultCode'].to_s.upcase
 
-    # Only process vuln-exploitable and vuln-version statuses
-    return if vry !~ /^V[VE]$/
-
-    refs = []
     vuln.elements.each('id') do |ref|
       rtyp = ref.attributes['type'].to_s.upcase
       rval = ref.text.to_s.strip
