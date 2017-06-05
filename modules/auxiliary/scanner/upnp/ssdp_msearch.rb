@@ -13,7 +13,12 @@ class MetasploitModule < Msf::Auxiliary
       'Name'        => 'UPnP SSDP M-SEARCH Information Discovery',
       'Description' => 'Discover information from UPnP-enabled systems',
       'Author'      => [ 'todb', 'hdm'], # Original scanner module and vuln info reporter, respectively
-      'License'     => MSF_LICENSE
+      'License'     => MSF_LICENSE,
+      'References'  =>
+        [
+          ['CVE', '2012-5958'],
+          ['CVE', '2012-5959']
+        ]
     )
 
     register_options( [
