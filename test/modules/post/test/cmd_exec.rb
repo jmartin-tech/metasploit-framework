@@ -91,4 +91,44 @@ class MetasploitModule < Msf::Post
       end
     end
   end
+
+ def test_cmd_exec_multiple_exec
+    vprint_status("Starting cmd_exec with sleep test")
+    test_array = [
+      "AAA",
+      "BBB",
+      "CCC",
+      "DDD",
+      "EEE",
+      "FFF",
+      "GGG",
+      "HHH",
+      "III",
+      "JJJ",
+      "KKK",
+      "LLL"
+    ]
+
+    it "should validly complete multiple commands with sleep between" do
+      output = ""
+      test_result = ""
+      test_array.each do |value|
+        output += cmd_exec "echo #{value}"; Rex.sleep 0.5
+        test_result += "#{value}"
+      end
+      test_result == output
+    end
+
+    vprint_status("Starting cmd_exec no sleep test")
+
+    it "should validly complete multiple commands no sleep between" do
+      output = ""
+      test_result = ""
+      test_array.each do |value|
+        output += cmd_exec "echo #{value}"
+        test_result += "#{value}"
+      end
+      test_result == output
+    end
+  end
 end
