@@ -6,6 +6,7 @@ require 'socket'
 require 'sinatra/base'
 require 'json'
 require 'sinatra-websocket'
+require 'rex/ui/text/output/stdio'
 require './tools/session-ui/backend'
 
   class WebConsoleServer < Sinatra::Base
@@ -16,7 +17,7 @@ require './tools/session-ui/backend'
       set :public_folder, File.dirname(__FILE__)+'/public'
       set :server, %w[thin mongrel webrick]
       set :content_type,'json'
-      set :sockets, []
+      set :sockets, {}
     end
 
 
@@ -29,17 +30,23 @@ require './tools/session-ui/backend'
             #Websocket connection opened.
 
             ws.send("Connection Established!")
-            settings.sockets << ws
+            rs = Rex::Ui::Text::Output::Stdio.new
+            rd, wr = IO.pipe
+            rs.io = wr
+            settings.sockets[ws] = [rs, rd]
           end
           buffer =Hash.new
           ws.onmessage do |msg|
             #Handle incoming websocket message
             return_array=[]
             EM.next_tick {
-              settings.sockets.each{|s|
-
-                output=Sinatra::Backend::Server.execute_script(msg)
-                s.send(output.to_json)
+              settings.sockets.each_pair{ |s, obj_list|
+                rs = obj_list[0]
+                rd = obj_list[1]
+                result = Sinatra::Backend::Server.execute_script(msg, rs)
+                puts "got to result"
+                s.send(rd.read)
+                puts "displayed to result"
               }
             }
           end
