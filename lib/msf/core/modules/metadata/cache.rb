@@ -42,6 +42,16 @@ class Cache
   end
 
   #
+  #  Returns the cached module data Obj for a specific module instance
+  #
+  def get_instance_metadata(module_instance)
+    @mutex.synchronize {
+      wait_for_load
+      @module_metadata_cache[get_cache_key(module_instance)]
+    }
+  end
+
+  #
   # Checks for modules loaded that are not a part of the cache and updates the underlying store
   # if there are changes.
   #
