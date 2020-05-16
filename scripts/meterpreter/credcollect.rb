@@ -12,7 +12,7 @@ opts = Rex::Parser::Arguments.new(
   "-p" => [ true,"The SMB port used to associate credentials."]
 )
 
-smb_port = 445
+smb_post = 445
 
 opts.parse(args) { |opt, idx, val|
   case opt
@@ -22,7 +22,7 @@ opts.parse(args) { |opt, idx, val|
     print_line(opts.usage)
     raise Rex::Script::Completed
   when "-p" # This ought to read from the exploit's datastore.
-    smb_port = val.to_i
+    smb_post = val.to_i
   end
 }
 
