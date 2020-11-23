@@ -38,7 +38,7 @@ flags = []
 opts.parse(ARGV) { |opt, idx, val|
   case opt
   when "-h"
-    puts "\nMetasploit Script for Displaying Module Reference information."
+    puts "\nMetasploit Script for Displaying Option information."
     puts "=========================================================="
     puts opts.usage
     exit
@@ -104,7 +104,7 @@ if match
 end
 
 tbl = Rex::Text::Table.new(
-  'Header'  => 'Modules Without CVE',
+  'Header'  => 'Module Options',
   'Indent'  => 2,
   'Columns' => columns
 )
