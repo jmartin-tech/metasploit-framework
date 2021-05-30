@@ -7,8 +7,6 @@
 
 class MetasploitModule < Msf::Auxiliary
   include Msf::Auxiliary::Report
-
-
   def initialize(info={})
     super(update_info(info,
       'Name'        => 'ZoomEye Search',
@@ -25,15 +23,17 @@ class MetasploitModule < Msf::Auxiliary
       ],
       'License'     => MSF_LICENSE
       ))
-
       register_options(
         [
           OptString.new('USERNAME', [true, 'The ZoomEye username']),
           OptString.new('PASSWORD', [true, 'The ZoomEye password']),
           OptString.new('ZOOMEYE_DORK', [true, 'The ZoomEye dork']),
+          OptString.new('FACETS', [false, 'A comma-separated list of properties to get summary information on query', nil, ['app', 'device', 'service', 'os', 'port', 'country', 'city']]),
           OptEnum.new('RESOURCE', [true, 'ZoomEye Resource Type', 'host', ['host', 'web']]),
-          OptInt.new('MAXPAGE', [true, 'Max amount of pages to collect', 1])
-        ])
+          OptInt.new('MAXPAGE', [true, 'Max amount of pages to collect', 1]),
+          OptString.new('OUTFILE', [false, 'A filename to store the list of IPs']),
+          OptBool.new('DATABASE', [false, 'Add search results to the database', false])
+       ])
   end
 
   # Check to see if api.zoomeye.org resolves properly
@@ -49,7 +49,6 @@ class MetasploitModule < Msf::Auxiliary
 
   def login(username, password)
     # See more: https://www.zoomeye.org/api/doc#login
-
     access_token = ''
     @cli = Rex::Proto::Http::Client.new('api.zoomeye.org', 443, {}, true)
     @cli.connect
@@ -73,7 +72,7 @@ class MetasploitModule < Msf::Auxiliary
     access_token
   end
 
-  def dork_search(dork, resource, page)
+  def dork_search(resource, dork, page, facets)
     # param: dork
     #        ex: country:cn
     #        access https://www.zoomeye.org/search/dorks for more details.
@@ -93,7 +92,7 @@ class MetasploitModule < Msf::Auxiliary
         'vars_get' => {
           'query'  => dork,
           'page'   => page,
-          'facet'  => 'ip'
+          'facet'  => facets
         }
       })
 
@@ -121,27 +120,11 @@ class MetasploitModule < Msf::Auxiliary
     records && records.key?('matches')
   end
 
-  def parse_host_records(records)
-    records.each do |match|
-      host = match['ip']
-      port = match['portinfo']['port']
-
-      report_service(:host => host, :port => port)
-      print_good("Host: #{host} ,PORT: #{port}")
-    end
-  end
-
-  def parse_web_records(records)
-    records.each do |match|
-      host = match['ip'][0]
-      domains = match['domains']
-
-      report_host(:host => host)
-      print_good("Host: #{host}, Domains: #{domains}")
-    end
-  end
-
   def run
+    dork = datastore['ZOOMEYE_DORK']
+    resource = datastore['RESOURCE']
+    maxpage = datastore['MAXPAGE']
+    facets = datastore['FACETS']
     # check to ensure api.zoomeye.org is resolvable
     unless zoomeye_resolvable?
       print_error("Unable to resolve api.zoomeye.org")
@@ -154,25 +137,94 @@ class MetasploitModule < Msf::Auxiliary
       return
     end
 
-    # create ZoomEye request parameters
-    dork = datastore['ZOOMEYE_DORK']
-    resource = datastore['RESOURCE']
-    page = 1
-    maxpage = datastore['MAXPAGE']
+    results = []
+    results[0] = dork_search(resource, dork, 1, facets)
+
+    if results[0]['total'].nil? || results[0]['total'] == 0
+      msg = "No results."
+      if results[0]['error'].to_s.length > 0
+        msg << " Error: #{results[0]['error']}"
+      end
+      print_error(msg)
+      return
+    end
+
+    # Determine page count based on total results
+    if results[0]['total'] % 100 == 0
+      tpages = results[0]['total'] / 100
+    else
+      tpages = results[0]['total'] / 100 + 1
+    end
+    maxpage = tpages if datastore['MAXPAGE'] > tpages
+
+    print_status("Total: #{results[0]['total']} on #{tpages} " +
+      "pages. Showing: #{maxpage} page(s)")
+
+    # If search results greater than 100, loop & get all results
+    if results[0]['total'] > 100
+      print_status('Collecting data, please wait...')
+      page = 1
+      while page < maxpage
+        page_result = dork_search(resource, dork, page, facets)
+        if page_result['matches'].nil?
+          next
+        end
+        results[page] = page_result
+        page += 1
+      end
+    end
+    
+    tbl = Rex::Text::Table.new(
+      'Header'  => 'Search Results',
+      'Indent'  => 1,
+      'Columns' => ['IP:Port', 'City', 'Country', 'Hostname']
+    )
+    page = 0
 
     # scroll max pages from ZoomEye
-    while page <= maxpage
-      print_status("ZoomEye #{resource} Search: #{dork} - page: #{page}")
-      results = dork_search(dork, resource, page) if dork
-      break unless match_records?(results)
-
-      matches = results['matches']
-      if resource.include?('web')
-        parse_web_records(matches)
-      else
-        parse_host_records(matches)
+    while page < maxpage
+      results.each do |records|
+        if resource.include?('host')
+          records['matches'].each do |match|
+            ip = match['ip']
+            port = match['portinfo']['port']
+            city = match['geoinfo']['city']['names']['en']
+            country = match['geoinfo']['country']['names']['en']
+            hostname = match['portinfo']['hostname'] 
+            os = match['portinfo']['os']
+            report_host(:host     => ip,
+                        :name     => hostname,
+                        :os       => os,
+                        :comments => 'Added from Zoomeye'
+                        ) if datastore['DATABASE']
+            report_service(:host => ip,
+                           :port => port,
+                           :info => match['portinfo']['extrainfo']
+                           ) if datastore['DATABASE']
+            tbl << ["#{ip}:#{port}", city, country, hostname]
+          end
+        else
+          records['matches'].each do |match|
+            ip = match['ip']
+            city = match['geoinfo']['city']['names']['en']
+            country = match['geoinfo']['country']['names']['en']
+            hostname = match['site'] 
+            report_host(:host     => ip,
+                        :name     => hostname,
+                        :comments => 'Added from Zoomeye'
+                        ) if datastore['DATABASE']
+            report_service(:host => ip,
+                           :port => port,
+                           :info => match['portinfo']['extrainfo']
+                           ) if datastore['DATABASE']
+            tbl << ["#{ip}", city, country, hostname]
+          end
+        end
       end
       page += 1
     end
+    print_line()
+    print_line("#{tbl}")
+    save_output(tbl) if datastore['OUTFILE']
   end
 end
