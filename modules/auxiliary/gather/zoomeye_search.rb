@@ -244,7 +244,7 @@ class MetasploitModule < Msf::Auxiliary
     if resource.include?('host')
       print_line("#{tbl1}")
       save_output(tbl1) if datastore['OUTFILE']
-    else
+    else if resource.include?('web')
       print_line("#{tbl2}")
       save_output(tbl2) if datastore['OUTFILE']
     end
