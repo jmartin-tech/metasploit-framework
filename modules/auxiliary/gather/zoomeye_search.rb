@@ -5,6 +5,7 @@
 
 class MetasploitModule < Msf::Auxiliary
   include Msf::Auxiliary::Report
+
   def initialize(info={})
     super(update_info(info,
       'Name'        => 'ZoomEye Search',
@@ -21,6 +22,7 @@ class MetasploitModule < Msf::Auxiliary
       ],
       'License'     => MSF_LICENSE
       ))
+
       register_options(
         [
           OptString.new('USERNAME', [true, 'The ZoomEye username']),
@@ -47,6 +49,7 @@ class MetasploitModule < Msf::Auxiliary
 
   def login(username, password)
     # See more: https://www.zoomeye.org/api/doc#login
+
     access_token = ''
     @cli = Rex::Proto::Http::Client.new('api.zoomeye.org', 443, {}, true)
     @cli.connect
@@ -171,14 +174,18 @@ class MetasploitModule < Msf::Auxiliary
         page += 1
       end
     end
-    
-    tbl = Rex::Text::Table.new(
+
+    tbl1 = Rex::Text::Table.new(
       'Header'  => 'Search Results',
       'Indent'  => 1,
-      'Columns' => ['IP:Port', 'City', 'Country', 'Hostname']
+      'Columns' => ['IP:Port', 'City', 'Country', 'Hostname', 'OS', 'Service:Version', 'Info']
+    )
+    tbl2 = Rex::Text::Table.new(
+      'Header'  => 'Search Results',
+      'Indent'  => 1,
+      'Columns' => ['IP', 'Site', 'City', 'Country', 'DB:Version', 'WebApp:Version']
     )
     page = 0
-
     # scroll max pages from ZoomEye
     while page < maxpage
       results.each do |records|
@@ -190,39 +197,56 @@ class MetasploitModule < Msf::Auxiliary
             country = match['geoinfo']['country']['names']['en']
             hostname = match['portinfo']['hostname'] 
             os = match['portinfo']['os']
+            service = match['portinfo']['app']
+            version = match['portinfo']['version']
+            info = match['portinfo']['extrainfo']
             report_host(:host     => ip,
                         :name     => hostname,
-                        :os       => os,
+                        :os_name  => os,
                         :comments => 'Added from Zoomeye'
                         ) if datastore['DATABASE']
             report_service(:host => ip,
                            :port => port,
-                           :info => match['portinfo']['extrainfo']
+                           :name => "#{service}:#{version}",
+                           :info => info   
                            ) if datastore['DATABASE']
-            tbl << ["#{ip}:#{port}", city, country, hostname]
+            tbl1 << ["#{ip}:#{port}", city, country, hostname, os, "#{service}:#{version}", info]
           end
-        else
+        else if resource.include?('web')
           records['matches'].each do |match|
             ip = match['ip']
+            site = match['site']
             city = match['geoinfo']['city']['names']['en']
             country = match['geoinfo']['country']['names']['en']
-            hostname = match['site'] 
+            database = match['db']
+            dbInfo = ''
+            database.each do |db|
+              dbInfo << "#{db['name']}:"
+              dbInfo << "#{db['version']}\n"
+            end
+            webapp = match['webapp']
+            waInfo = ''
+            webapp.each do |wa|
+              waInfo << "#{wa['name']}:"
+              waInfo << "#{wa['version']}\n"
+            end
             report_host(:host     => ip,
-                        :name     => hostname,
+                        :name     => site,
                         :comments => 'Added from Zoomeye'
                         ) if datastore['DATABASE']
-            report_service(:host => ip,
-                           :port => port,
-                           :info => match['portinfo']['extrainfo']
-                           ) if datastore['DATABASE']
-            tbl << ["#{ip}", city, country, hostname]
+            tbl2 << [ip, site, city, country, dbInfo, waInfo]
           end
         end
       end
       page += 1
     end
     print_line()
-    print_line("#{tbl}")
-    save_output(tbl) if datastore['OUTFILE']
+    if resource.include?('host')
+      print_line("#{tbl1}")
+      save_output(tbl1) if datastore['OUTFILE']
+    else
+      print_line("#{tbl2}")
+      save_output(tbl2) if datastore['OUTFILE']
+    end
   end
 end
