@@ -211,7 +211,7 @@ class MetasploitModule < Msf::Auxiliary
                            ) if datastore['DATABASE']
             tbl1 << ["#{ip}:#{port}", city, country, hostname, os, "#{service}:#{version}", info]
           end
-        else if resource.include?('web')
+        elsif resource.include?('web')
           records['matches'].each do |match|
             ip = match['ip']
             site = match['site']
@@ -243,7 +243,7 @@ class MetasploitModule < Msf::Auxiliary
     if resource.include?('host')
       print_line("#{tbl1}")
       save_output(tbl1) if datastore['OUTFILE']
-    else if resource.include?('web')
+    elsif resource.include?('web')
       print_line("#{tbl2}")
       save_output(tbl2) if datastore['OUTFILE']
     end
