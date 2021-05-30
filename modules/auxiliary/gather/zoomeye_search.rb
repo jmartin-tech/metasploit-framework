@@ -43,8 +43,7 @@ class MetasploitModule < Msf::Auxiliary
     rescue RuntimeError, SocketError
       return false
     end
-
-    true
+    return true
   end
 
   def login(username, password)
