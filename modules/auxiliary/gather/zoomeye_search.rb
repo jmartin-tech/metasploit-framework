@@ -195,7 +195,7 @@ class MetasploitModule < Msf::Auxiliary
             port = match['portinfo']['port']
             city = match['geoinfo']['city']['names']['en']
             country = match['geoinfo']['country']['names']['en']
-            hostname = match['portinfo']['hostname'] 
+            hostname = match['portinfo']['hostname']
             os = match['portinfo']['os']
             service = match['portinfo']['app']
             version = match['portinfo']['version']
@@ -208,7 +208,7 @@ class MetasploitModule < Msf::Auxiliary
             report_service(:host => ip,
                            :port => port,
                            :name => "#{service}:#{version}",
-                           :info => info   
+                           :info => info
                            ) if datastore['DATABASE']
             tbl1 << ["#{ip}:#{port}", city, country, hostname, os, "#{service}:#{version}", info]
           end
