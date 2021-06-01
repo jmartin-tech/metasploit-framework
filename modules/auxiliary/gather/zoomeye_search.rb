@@ -15,7 +15,6 @@ class MetasploitModule < Msf::Auxiliary
         components(ip, services, etc.).
         Mind to enclose the whole request with quotes and limit the span of filters:
         `set zoomeye_dork 'country:"france"+some+query'`
-        `set zoomeye_dork "country:'france'+i'd+escape"`
 
         Setting facets will output a simple report on the overall search. It's values are:
         Host search: app, device, service, os, port, country, city
@@ -33,7 +32,6 @@ class MetasploitModule < Msf::Auxiliary
       ],
       'License'     => MSF_LICENSE
       ))
-
       register_options(
         [
           OptString.new('USERNAME', [true, 'The ZoomEye username']),
