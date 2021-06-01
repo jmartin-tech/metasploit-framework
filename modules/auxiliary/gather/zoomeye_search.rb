@@ -16,11 +16,11 @@ class MetasploitModule < Msf::Auxiliary
         Mind to enclose the whole request with quotes and limit the span of filters:
         `set zoomeye_dork 'country:"france"+some+query'`
         `set zoomeye_dork "country:'france'+i'd+escape"`
-        
+
         Setting facets will output a simple report on the overall search. It's values are:
         Host search: app, device, service, os, port, country, city
         Web search: webapp, component, framework, frontend, server, waf, os, country, city
-        
+
         Possible filters values are:
         Host search: app, ver, device, os, service, ip, cidr, hostname, port, city, country, asn
         Web search: app, header, keywords, desc, title, ip, site, city, country
@@ -202,7 +202,7 @@ class MetasploitModule < Msf::Auxiliary
             print_line("#{f['name']} count=#{f['count']}")
           end
         end
-      else  
+      else
         page['matches'].each do |match|
           city = match['geoinfo']['city']['names']['en']
           country = match['geoinfo']['country']['names']['en']
@@ -232,7 +232,7 @@ class MetasploitModule < Msf::Auxiliary
             ipList = ''
             ips.each do |ip|
               ipList << "#{ip}\n"
-            end 
+            end
             site = match['site']
             database = match['db']
             dbInfo = ''
