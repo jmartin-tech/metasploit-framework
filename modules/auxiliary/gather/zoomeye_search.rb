@@ -227,9 +227,7 @@ class MetasploitModule < Msf::Auxiliary
             tbl1 << ["#{ip}:#{port}", city, country, hostname, os, "#{service}:#{version}", info]
           else
             ips = match['ip']
-            
             site = match['site']
-            
             database = match['db']
             dbInfo = []
             x = 0
