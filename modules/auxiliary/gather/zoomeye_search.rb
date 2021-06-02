@@ -253,13 +253,13 @@ class MetasploitModule < Msf::Auxiliary
       if facets
         return
       end
-      if resource.include?('host')
-        print_line("#{tbl1}")
-        save_output(tbl1) if datastore['OUTFILE']
-      else
-        print_line("#{tbl2}")
-        save_output(tbl2) if datastore['OUTFILE']
-      end
+    end
+    if resource.include?('host')
+      print_line("#{tbl1}")
+      save_output(tbl1) if datastore['OUTFILE']
+    else
+      print_line("#{tbl2}")
+      save_output(tbl2) if datastore['OUTFILE']
     end
   end
 end
