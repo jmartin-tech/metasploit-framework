@@ -32,6 +32,7 @@ class MetasploitModule < Msf::Auxiliary
       ],
       'License'     => MSF_LICENSE
       ))
+
       register_options(
         [
           OptString.new('USERNAME', [true, 'The ZoomEye username']),
@@ -179,7 +180,6 @@ class MetasploitModule < Msf::Auxiliary
         page += 1
       end
     end
-
     tbl1 = Rex::Text::Table.new(
       'Header'  => 'Search Results',
       'Indent'  => 1,
@@ -193,10 +193,10 @@ class MetasploitModule < Msf::Auxiliary
     # scroll max pages from ZoomEye
     results.each do |page|
       if facets
-        fcets = page['facets']
-        fcets.each do |fac|
-          print_line("#{fac[0]}")
-          fac[1].each do |f|
+        fac = page['facets']
+        fac.each do |fa|
+          print_line("#{fa[0]}")
+          fa[1].each do |f|
             print_line("#{f['name']} count=#{f['count']}")
           end
         end
@@ -227,28 +227,28 @@ class MetasploitModule < Msf::Auxiliary
             tbl1 << ["#{ip}:#{port}", city, country, hostname, os, "#{service}:#{version}", info]
           else
             ips = match['ip']
-            ipList = ''
-            ips.each do |ip|
-              ipList << "#{ip}\n"
-            end
+            
             site = match['site']
+            
             database = match['db']
-            dbInfo = ''
+            dbInfo = []
+            x = 0
             database.each do |db|
-              dbInfo << "#{db['name']}:"
-              dbInfo << "#{db['version']}\n"
+              dbInfo[x] = "#{db['name']}:#{db['version']}"
+              x += 1
             end
             webapp = match['webapp']
-            waInfo = ''
+            waInfo = []
+            x = 0
             webapp.each do |wa|
-              waInfo << "#{wa['name']}:"
-              waInfo << "#{wa['version']}\n"
+              waInfo[x] = "#{wa['name']}:#{wa['version']}"
+              x += 1
             end
             report_host(:host     => ip,
                         :name     => site,
                         :comments => 'Added from Zoomeye'
                         ) if datastore['DATABASE']
-            tbl2 << [ipList, site, city, country, dbInfo, waInfo]
+            tbl2 << [ips, site, city, country, dbInfo, waInfo]
           end
         end
       end
