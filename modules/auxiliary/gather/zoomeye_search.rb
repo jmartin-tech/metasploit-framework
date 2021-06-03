@@ -197,12 +197,12 @@ class MetasploitModule < Msf::Auxiliary
         end
       end
       tbl1 = Rex::Text::Table.new(
-        'Header'  => 'Search Results',
+        'Header'  => 'Host search',
         'Indent'  => 1,
         'Columns' => ['IP:Port', 'City', 'Country', 'Hostname', 'OS', 'Service:Version', 'Info']
       )
       tbl2 = Rex::Text::Table.new(
-        'Header'  => 'Search Results',
+        'Header'  => 'Web search',
         'Indent'  => 1,
         'Columns' => ['IP', 'Site', 'City', 'Country', 'DB:Version', 'WebApp:Version']
       )
@@ -246,7 +246,7 @@ class MetasploitModule < Msf::Auxiliary
             tbl2 << [ips, site, city, country, dbInfo, waInfo]
           end
         end
-      end
+      end#page.each
       if resource.include?('host')
         print_line("#{tbl1}")
         save_output(tbl1) if datastore['OUTFILE']
@@ -254,6 +254,6 @@ class MetasploitModule < Msf::Auxiliary
         print_line("#{tbl2}")
         save_output(tbl2) if datastore['OUTFILE']
       end
-    end
+    end#if facets
   end
 end
