@@ -24,7 +24,7 @@ class MetasploitModule < Msf::Auxiliary
         Host search: app, ver, device, os, service, ip, cidr, hostname, port, city, country, asn
         Web search: app, header, keywords, desc, title, ip, site, city, country
       },
-      'Author'      => [ 'Nixawk, modified by Yvain' ],
+      'Author'      => [ 'Nixawk, Yvain' ],
       'References'  => [
         ['URL', 'https://github.com/zoomeye/SDK'],
         ['URL', 'https://www.zoomeye.org/api/doc'],
@@ -60,7 +60,7 @@ class MetasploitModule < Msf::Auxiliary
     rescue RuntimeError, SocketError
       return false
     end
-    return true
+    true
   end
 
   def login(username, password)
@@ -86,7 +86,7 @@ class MetasploitModule < Msf::Auxiliary
 
     records = ActiveSupport::JSON.decode(res.body)
     access_token = records['access_token'] if records && records.key?('access_token')
-    return access_token
+    access_token
   end
 
   def dork_search(resource, dork, page, facets)
@@ -118,7 +118,7 @@ class MetasploitModule < Msf::Auxiliary
     if res.body =~ /Invalid Token, /
       fail_with(Failure::BadConfig, '401 Unauthorized. Your ZOOMEYE_APIKEY is invalid')
     end
-    return ActiveSupport::JSON.decode(res.body)
+    res.get_json_document
   end
 
   def match_records?(records)
@@ -144,12 +144,13 @@ class MetasploitModule < Msf::Auxiliary
       print_status("Logged in to zoomeye")
     end
 
+    first_page = 0
     results = []
-    results[0] = dork_search(resource, dork, 1, facets)
+    results[first_page] = dork_search(resource, dork, 1, facets)
 
-    if results[0]['total'].nil? || results[0]['total'] == 0
+    if results[first_page]['total'].nil? || results[first_page]['total'] == 0
       msg = "No results."
-      if results[0]['error'].to_s.length > 0
+      if results[first_page]['error'].to_s.length > 0
         msg << " Error: #{results[0]['error']}"
       end
       print_error(msg)
@@ -157,50 +158,56 @@ class MetasploitModule < Msf::Auxiliary
     end
 
     # Determine page count based on total results
-    if results[0]['total'] % 20 == 0
-      tpages = results[0]['total'] / 20
+    if results[first_page]['total'] % 20 == 0
+      tpages = results[first_page]['total'] / 20
     else
-      tpages = results[0]['total'] / 20 + 1
+      tpages = results[first_page]['total'] / 20 + 1
     end
     maxpage = tpages if datastore['MAXPAGE'] > tpages
 
-    print_status("Total: #{results[0]['total']} on #{tpages} " +
-      "pages. Showing: #{maxpage} page(s)")
-
-    # If search results greater than 20, loop & get all results
-    if results[0]['total'] > 20
-      print_status('Collecting data, please wait...')
-      page = 1
-      while page < maxpage
-        page_result = dork_search(resource, dork, page+1, facets)
-        if page_result['matches'].nil?
-          next
+    if facets
+      facetsTbl = Rex::Text::Table.new(
+        'Header'  => 'Facets',
+        'Indent'  => 1,
+        'Columns' => ['Facet', 'Name', 'Count']
+      )
+      print_status("Total: #{results[first_page]['total']} on #{tpages} " +
+        "pages. Showing facets")
+      facet = results[first_page]['facets']
+      facet.each do |name, list|
+        list.each do |f|
+          facetsTbl << ["#{name}", "#{f['name']}", "#{f['count']}"]
         end
-        results[page] = page_result
-        page += 1
       end
-    end
-    tbl1 = Rex::Text::Table.new(
-      'Header'  => 'Search Results',
-      'Indent'  => 1,
-      'Columns' => ['IP:Port', 'City', 'Country', 'Hostname', 'OS', 'Service:Version', 'Info']
-    )
-    tbl2 = Rex::Text::Table.new(
-      'Header'  => 'Search Results',
-      'Indent'  => 1,
-      'Columns' => ['IP', 'Site', 'City', 'Country', 'DB:Version', 'WebApp:Version']
-    )
-    # scroll max pages from ZoomEye
-    results.each do |page|
-      if facets
-        fac = page['facets']
-        fac.each do |fa|
-          print_line("#{fa[0]}")
-          fa[1].each do |f|
-            print_line("#{f['name']} count=#{f['count']}")
+      print_line("#{facetsTbl}")
+    else
+      print_status("Total: #{results[first_page]['total']} on #{tpages} " +
+        "pages. Showing: #{maxpage} page(s)")
+      # If search results greater than 20, loop & get all results
+      if results[first_page]['total'] > 20
+        print_status('Collecting data, please wait...')
+        page = 1
+        while page < maxpage
+          page_result = dork_search(resource, dork, page+1, facets)
+          if page_result['matches'].nil?
+            next
           end
+          results[page] = page_result
+          page += 1
         end
-      else
+      end
+      tbl1 = Rex::Text::Table.new(
+        'Header'  => 'Search Results',
+        'Indent'  => 1,
+        'Columns' => ['IP:Port', 'City', 'Country', 'Hostname', 'OS', 'Service:Version', 'Info']
+      )
+      tbl2 = Rex::Text::Table.new(
+        'Header'  => 'Search Results',
+        'Indent'  => 1,
+        'Columns' => ['IP', 'Site', 'City', 'Country', 'DB:Version', 'WebApp:Version']
+      )
+      # scroll max pages from ZoomEye
+      results.each do |page|
         page['matches'].each do |match|
           city = match['geoinfo']['city']['names']['en']
           country = match['geoinfo']['country']['names']['en']
@@ -229,19 +236,9 @@ class MetasploitModule < Msf::Auxiliary
             ips = match['ip']
             site = match['site']
             database = match['db']
-            dbInfo = []
-            x = 0
-            database.each do |db|
-              dbInfo[x] = "#{db['name']}:#{db['version']}"
-              x += 1
-            end
+            dbInfo = database.map{ |db| "#{db['name']}:#{db['version']}" }
             webapp = match['webapp']
-            waInfo = []
-            x = 0
-            webapp.each do |wa|
-              waInfo[x] = "#{wa['name']}:#{wa['version']}"
-              x += 1
-            end
+            waInfo = webapp.map{ |wa| "#{wa['name']}:#{wa['version']}" }
             report_host(:host     => ip,
                         :name     => site,
                         :comments => 'Added from Zoomeye'
@@ -250,16 +247,13 @@ class MetasploitModule < Msf::Auxiliary
           end
         end
       end
-      if facets
-        return
+      if resource.include?('host')
+        print_line("#{tbl1}")
+        save_output(tbl1) if datastore['OUTFILE']
+      else
+        print_line("#{tbl2}")
+        save_output(tbl2) if datastore['OUTFILE']
       end
-    end
-    if resource.include?('host')
-      print_line("#{tbl1}")
-      save_output(tbl1) if datastore['OUTFILE']
-    else
-      print_line("#{tbl2}")
-      save_output(tbl2) if datastore['OUTFILE']
     end
   end
 end
