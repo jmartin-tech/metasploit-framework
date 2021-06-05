@@ -24,7 +24,7 @@ class MetasploitModule < Msf::Auxiliary
         Host search: app, ver, device, os, service, ip, cidr, hostname, port, city, country, asn
         Web search: app, header, keywords, desc, title, ip, site, city, country
       },
-      'Author'      => [ 'Nixawk', 'Yvain' ],
+      'Author'      => [ 'Nixawk, Yvain' ],
       'References'  => [
         ['URL', 'https://github.com/zoomeye/SDK'],
         ['URL', 'https://www.zoomeye.org/api/doc'],
@@ -246,7 +246,7 @@ class MetasploitModule < Msf::Auxiliary
             tbl2 << [ips, site, city, country, dbInfo, waInfo]
           end
         end
-      end#page.each
+      end
       if resource.include?('host')
         print_line("#{tbl1}")
         save_output(tbl1) if datastore['OUTFILE']
@@ -254,6 +254,6 @@ class MetasploitModule < Msf::Auxiliary
         print_line("#{tbl2}")
         save_output(tbl2) if datastore['OUTFILE']
       end
-    end#if facets
+    end
   end
 end
