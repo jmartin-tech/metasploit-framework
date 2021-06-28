@@ -39,7 +39,7 @@ module ReverseSsh
         OptString.new('Ssh::Version', [
           true,
           'The SSH version string to provide',
-          Rex::Proto::Ssh::Connection.default_options['local_version']
+          default_version_string
         ])
       ], Msf::Handler::ReverseSsh
     )
@@ -152,6 +152,16 @@ module ReverseSsh
   end
   attr_accessor :service # :nodoc:
 
+  private
+
+  def default_version_string
+    require 'rex/proto/ssh/connection'
+    Rex::Proto::Ssh::Connection.default_options['local_version']
+  rescue LoadError => e
+    print_error("This handler requires PTY access not available on all platforms.")
+    elog(e)
+    'SSH-2.0-OpenSSH_5.3p1'
+  end
 end
 end
 end
