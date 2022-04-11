@@ -24,6 +24,8 @@ on:
   pull_request:
     branches:
       - '*'
+    branches-ignore:
+      = weekly-dependency-updates
 
 jobs:
   build:
