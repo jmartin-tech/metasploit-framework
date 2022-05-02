@@ -1,5 +1,7 @@
 # coding: utf-8
 
+# delete this comment if it ever lands
+
 # During build, the Gemfile is temporarily moved and
 # we must manually define the project root
 if ENV['MSF_ROOT']
