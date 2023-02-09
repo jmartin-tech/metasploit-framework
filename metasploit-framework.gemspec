@@ -217,6 +217,9 @@ Gem::Specification.new do |spec|
   spec.add_runtime_dependency 'aws-sdk-ec2'
   spec.add_runtime_dependency 'aws-sdk-iam'
 
+  # AWS session support
+  spec.add_runtime_dependency 'aws-sdk-ec2instanceconnect'
+
   # Needed for WebSocket Support
   spec.add_runtime_dependency 'faye-websocket'
   spec.add_runtime_dependency 'eventmachine'
